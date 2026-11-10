@@ -1,5 +1,7 @@
 # 鸣潮桌宠 · 宝箱助手
 
+下载：[最新版本 Releases](https://github.com/YoitsuHolo/wuwachest/releases) ｜ 源码：[GitHub](https://github.com/YoitsuHolo/wuwachest)
+
 一个独立的 Windows 小工具，用来照看《鸣潮》桌宠 **Wuwa Tappo**：自动领取宝箱、实时显示字符数、记录领取历史，顺带把联机房间和字符统计也管起来。
 
 **不注入、不修改桌宠本体**。它通过 WebView2 的调试端口读取页面状态、触发页面上的按钮，读不到时退回 Windows UI Automation，两条路都不碰桌宠的安装文件。
