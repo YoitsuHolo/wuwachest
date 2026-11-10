@@ -77,6 +77,21 @@ namespace WuwaChest
             }
 
             if (probe) return RunProbe(cfg);
+            if (HasArg(args, "--token-show"))
+            {
+                Native.TryAttachConsole();
+                int tokenPort = CdpDiscovery.ResolvePort(cfg.CdpPort);
+                string token = TokenTools.ReadToken(tokenPort);
+                string tokenDesc = token == null ? "(读不到，可能未登录或 CDP 未连上)"
+                    : token.Substring(0, Math.Min(12, token.Length)) + "… (" + token.Length + " 字符)";
+                string expiryDesc = TokenTools.DescribeExpiry(TokenTools.ReadExpiry(tokenPort));
+                Console.WriteLine("端口: " + tokenPort);
+                Console.WriteLine("Token: " + tokenDesc);
+                Console.WriteLine("有效期: " + expiryDesc);
+                Log.Info("Token 检查：端口 " + tokenPort + "｜" + tokenDesc + "｜" + expiryDesc);
+                return 0;
+            }
+            if (HasArg(args, "--card-test")) return RunCardTest(cfg);
             if (HasArg(args, "--shot-test")) return RunShotTest(cfg);
             // 启动时自动开启 CDP（策略不存在且未提权时，会请求管理员权限重启自己）
             if (CdpSetup.PrepareAndMaybeElevate(cfg, args)) return 0;
@@ -130,7 +145,7 @@ namespace WuwaChest
             return false;
         }
 
-        internal const string Version = "2.5";
+        internal const string Version = "2.6";
 
         private static void WriteHelp()
         {
@@ -230,6 +245,27 @@ namespace WuwaChest
         }
 
         // 开发用：只验证截图区域是否正确，不领取
+        /// <summary>诊断：只跑一次「DOM 合成奖励卡片」，并打印从弹窗里读到的奖励名</summary>
+        private static int RunCardTest(AppConfig cfg)
+        {
+            bool attached = Native.TryAttachConsole();
+            var cdp = new CdpPetClient(cfg);
+            string reason = "";
+            string rel = null;
+            try { rel = cdp.CaptureCardFromDom(Log.Dir, 99, out reason, 2); }
+            catch (Exception ex) { reason = ex.Message; }
+
+            string text = rel == null
+                ? "合成失败：" + reason
+                : "已保存：" + Path.Combine(Log.Dir, rel.Replace('/', '\\'));
+            if (attached)
+            {
+                Console.WriteLine(text);
+                Console.WriteLine("奖励名：" + (string.IsNullOrEmpty(cdp.LastCardLabel) ? "(空)" : cdp.LastCardLabel));
+            }
+            Log.Info("卡片诊断：" + text + "｜奖励名 " + (string.IsNullOrEmpty(cdp.LastCardLabel) ? "(空)" : cdp.LastCardLabel));
+            return 0;
+        }
         private static int RunShotTest(AppConfig cfg)
         {
             bool attached = Native.TryAttachConsole();

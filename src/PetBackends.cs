@@ -1,4 +1,4 @@
-// PetBackends.cs — 读取/领取的两条实现：CDP（优先）与 UIA（兜底）
+﻿// PetBackends.cs — 读取/领取的两条实现：CDP（优先）与 UIA（兜底）
 using System;
 
 namespace WuwaChest
@@ -10,6 +10,7 @@ namespace WuwaChest
         bool Invoke(PetSnapshot snap, out string detail);
         ToastInfo FindToast(PetSnapshot before);
         string CaptureReward(string logsDir, ToastInfo toast, PetSnapshot snap, int index);
+        string LastRewardLabel { get; }
     }
 
     // 传统 UIA：找窗口、读 Text、Invoke 按钮、屏幕截图
@@ -43,6 +44,8 @@ namespace WuwaChest
         {
             return Screen.CaptureReward(logsDir, toast, snap, index);
         }
+
+        public string LastRewardLabel { get { return ""; } }
     }
 
     // CDP：直接读页面 JS、点按钮、截弹窗页（透明背景，只有卡片）
@@ -60,6 +63,8 @@ namespace WuwaChest
         }
 
         public string Name { get { return "cdp"; } }
+
+        public string LastRewardLabel { get { return _cdp.LastCardLabel; } }
 
         public PetSnapshot Read()
         {

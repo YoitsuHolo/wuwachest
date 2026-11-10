@@ -1,4 +1,4 @@
-// PetClient.cs — 通过 UI 自动化读取桌宠状态并触发领取
+﻿// PetClient.cs — 通过 UI 自动化读取桌宠状态并触发领取
 using System;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
@@ -327,7 +327,8 @@ namespace WuwaChest
 
                 // 只认真正的奖励弹窗：联机时头像栏/聊天也会"新出现"，不能当弹窗
                 bool isReward = (info.ClassName ?? "").IndexOf("chest-reward", StringComparison.OrdinalIgnoreCase) >= 0
-                                || (info.Name ?? "").StartsWith("新");
+                                || (info.Name ?? "").StartsWith("新")
+                                || (info.Name ?? "").StartsWith("重复");
                 if (!isReward) continue;
 
                 if (before != null && IsKnown(before, info)) continue;

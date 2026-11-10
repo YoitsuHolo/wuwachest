@@ -19,6 +19,7 @@ namespace WuwaChest
         private readonly string _configPath;
         private readonly string _logsDir;
         private AppConfig _cfg;
+        private TextBox _tokenInput;
         private readonly ClaimEngine _engine;
 
         private readonly Label _dot;
@@ -93,8 +94,6 @@ namespace WuwaChest
 
             Text = "鸣潮桌宠 · 宝箱助手";
             ClientSize = new Size(480, 644);
-            MinimumSize = new Size(480, 644);
-            MaximumSize = new Size(480, 644);
             StartPosition = FormStartPosition.CenterScreen;
             FormBorderStyle = FormBorderStyle.FixedSingle;
             MaximizeBox = false;
@@ -301,7 +300,7 @@ namespace WuwaChest
             histLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 34));
             histLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
             histLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 132));
-            histLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 40));
+            histLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 50));
 
             _claimSummary = new Label
             {
@@ -385,7 +384,7 @@ namespace WuwaChest
                 Dock = DockStyle.Fill,
                 FlowDirection = FlowDirection.TopDown,
                 WrapContents = false,
-                Padding = new Padding(16, 8, 16, 8),
+                Padding = new Padding(8, 8, 8, 8),
                 BackColor = Color.Transparent,
                 AutoScroll = true
             };
@@ -401,37 +400,85 @@ namespace WuwaChest
 
             var backgroundButtons = new FlowLayoutPanel
             {
-                Width = 216,
-                Height = 30,
+                Width = 204, Height = 28,
                 FlowDirection = FlowDirection.LeftToRight,
                 WrapContents = false
             };
-            backgroundButtons.Controls.Add(MakeButton("选择图片…", delegate { ChooseBackground(); }));
+            backgroundButtons.Controls.Add(MakeButton("选图", delegate { ChooseBackground(); }));
             backgroundButtons.Controls.Add(MakeButton("清除", delegate { ClearBackground(); }));
 
-            settingsFlow.Controls.Add(MakeSettingRow("读不到界面重试（分钟）", _setNotReady));
+            settingsFlow.Controls.Add(MakeSettingRow("界面重试（分钟）", _setNotReady));
             settingsFlow.Controls.Add(MakeSettingRow("", _setNotify));
             settingsFlow.Controls.Add(MakeSettingRow("", _setRewardShot));
             settingsFlow.Controls.Add(MakeSettingRow("", _setCdp));
             settingsFlow.Controls.Add(MakeSettingRow("", _setAutoMonitor));
             settingsFlow.Controls.Add(MakeSettingRow("", _setAutostart));
+            foreach (Control bgChild in backgroundButtons.Controls) { bgChild.Width = 96; bgChild.Margin = new Padding(0, 1, 6, 1); }
             settingsFlow.Controls.Add(MakeSettingRow("面板背景图", backgroundButtons));
-            settingsFlow.Controls.Add(MakeSettingRow("背景图浓度（越大越淡）", _setBackgroundDim));
+            settingsFlow.Controls.Add(MakeSettingRow("背景图浓度", _setBackgroundDim));
             var syncButtons = new FlowLayoutPanel
             {
-                Width = 236,
-                Height = 32,
+                Width = 204, Height = 28,
                 FlowDirection = FlowDirection.LeftToRight,
                 WrapContents = false
             };
-            syncButtons.Controls.Add(MakeButton("导出同步包…", delegate { ExportSync(); }));
-            syncButtons.Controls.Add(MakeButton("导入同步包…", delegate { ImportSync(); }));
+            syncButtons.Controls.Add(MakeButton("导出同步", delegate { ExportSync(); }));
+            syncButtons.Controls.Add(MakeButton("导入同步", delegate { ImportSync(); }));
+            foreach (Control syncChild in syncButtons.Controls) { syncChild.Width = 96; syncChild.Margin = new Padding(0, 1, 6, 1); }
             settingsFlow.Controls.Add(MakeSettingRow("跨电脑同步", syncButtons));
+            var tokenViewButtons = new FlowLayoutPanel
+            {
+                Width = 204, Height = 28,
+                FlowDirection = FlowDirection.LeftToRight,
+                WrapContents = false
+            };
+            var viewButton = MakeButton("有效期", delegate { ShowTokenExpiry(); });
+            viewButton.Width = 96;
+            viewButton.Margin = new Padding(0, 1, 6, 1);
+            var renewButton = MakeButton("续期", delegate { RenewToken(); });
+            renewButton.Width = 96;
+            renewButton.Margin = new Padding(0, 1, 6, 1);
+            tokenViewButtons.Controls.Add(viewButton);
+            tokenViewButtons.Controls.Add(renewButton);
+            settingsFlow.Controls.Add(MakeSettingRow("登录 Token", tokenViewButtons));
+
+            var tokenExtractButtons = new FlowLayoutPanel
+            {
+                Width = 204, Height = 28,
+                FlowDirection = FlowDirection.LeftToRight,
+                WrapContents = false
+            };
+            var extractButton = MakeButton("提取", delegate { CopyToken(); });
+            extractButton.Width = 96;
+            extractButton.Margin = new Padding(0, 1, 6, 1);
+            tokenExtractButtons.Controls.Add(extractButton);
+            settingsFlow.Controls.Add(MakeSettingRow("提取 Token", tokenExtractButtons));
+
+            _tokenInput = new TextBox
+            {
+                Width = 104,
+                Height = 26,
+                Margin = new Padding(0, 2, 8, 0),
+                UseSystemPasswordChar = false,
+                BorderStyle = BorderStyle.FixedSingle
+            };
+            var tokenLoginPanel = new FlowLayoutPanel
+            {
+                Width = 214, Height = 28,
+                FlowDirection = FlowDirection.LeftToRight,
+                WrapContents = false
+            };
+            tokenLoginPanel.Controls.Add(_tokenInput);
+            var loginButton = MakeButton("登录", delegate { LoginWithToken(); });
+            loginButton.Width = 96;
+            loginButton.Margin = new Padding(0, 1, 6, 1);
+            tokenLoginPanel.Controls.Add(loginButton);
+            settingsFlow.Controls.Add(MakeSettingRow("Token 登录", tokenLoginPanel));
 
             var settingsButtons = new FlowLayoutPanel
             {
-                Width = 446,
-                Height = 42,
+                Width = 360,
+                Height = 34,
                 FlowDirection = FlowDirection.LeftToRight,
                 WrapContents = false,
                 Margin = new Padding(0, 6, 0, 2)
@@ -445,8 +492,8 @@ namespace WuwaChest
                 Text = "以上设置会写入 config.json，下次启动继续生效。\r\n高级参数（窗口标题/类名、点击后等待、日志保留天数等）可直接编辑该文件。",
                 ForeColor = Muted,
                 AutoSize = false,
-                Width = 440,
-                Height = 72,
+                Width = 360,
+                Height = 56,
                 BackColor = Color.Transparent
             });
             var settingsCard = new GlassPanel
@@ -578,6 +625,7 @@ namespace WuwaChest
             EnableDoubleBuffer(this);
             EnableDoubleBuffer(_tabs);
             foreach (TabPage tabPage in _tabs.TabPages) EnableDoubleBuffer(tabPage);
+            HookScrollRepaint(_tabs);
 
             // ---------------- 托盘 ----------------
             _tray = new NotifyIcon
@@ -654,7 +702,8 @@ namespace WuwaChest
                 };
                 _timer.Start();
                 if (_cfg.AutoStartMonitor) _engine.Start();
-                ApplyBackground();
+                Shown += delegate { ApplyBackground(); };
+            ApplyBackground();
 
             // 联机房间：后台上报当前房间 + 记录历史
             _rooms = new RoomService(_cfg, _dir);
@@ -703,13 +752,37 @@ namespace WuwaChest
             };
         }
 
+        // 只装按钮的横向 FlowLayoutPanel：让高度跟着按钮走，否则按钮被行高裁掉
+        private static void RelaxButtonRows(Control root)
+        {
+            foreach (Control child in root.Controls)
+            {
+                var flow = child as FlowLayoutPanel;
+                if (flow != null && flow.FlowDirection == FlowDirection.LeftToRight && flow.Controls.Count > 0)
+                {
+                    bool onlyButtons = true;
+                    foreach (Control c in flow.Controls) { if (!(c is Button)) { onlyButtons = false; break; } }
+                    if (onlyButtons)
+                    {
+                        flow.AutoSize = true;
+                        flow.AutoSizeMode = AutoSizeMode.GrowAndShrink;
+                        flow.MinimumSize = new Size(0, 0);
+                    }
+                }
+                RelaxButtonRows(child);
+            }
+        }
+
         private Button MakeButton(string text, EventHandler onClick)
         {
+            // 高度跟字体走（+14 给边框和上下留白）；宽度按文字量算，避免不同 DPI 下被裁
+            int width = TextRenderer.MeasureText(text, Font).Width + 28;
             var button = new Button
             {
                 Text = text,
-                Width = 104,
-                Height = 30,
+                AutoSize = false,
+                Width = Math.Max(80, width),
+                Height = Font.Height + 10,
                 FlatStyle = FlatStyle.Flat,
                 BackColor = Paper,
                 ForeColor = Ink,
@@ -723,14 +796,14 @@ namespace WuwaChest
 
         private static NumericUpDown MakeNumber(decimal min, decimal max, int decimals, decimal step, double value)
         {
-            var box = new NumericUpDown
+                        var box = new NumericUpDown
             {
                 Minimum = min,
                 Maximum = max,
                 DecimalPlaces = decimals,
                 Increment = step,
                 Width = 90,
-                Height = 26,
+                Height = 28,
                 Font = new Font("Microsoft YaHei UI", 9f)
             };
             decimal v;
@@ -757,7 +830,23 @@ namespace WuwaChest
 
         private static Panel MakeSettingRow(string label, Control control)
         {
-            var panel = new Panel { Width = 446, Height = 34, BackColor = Color.Transparent };
+            // 行容器里如果有 FlowLayoutPanel，先把它撑到能装下最高的子控件，再据此定行高
+            var flow = control as FlowLayoutPanel;
+            if (flow != null)
+            {
+                int tallest = 0;
+                foreach (Control child in flow.Controls)
+                {
+                    int need = child.Height + child.Margin.Top + child.Margin.Bottom;
+                    if (need > tallest) tallest = need;
+                }
+                if (tallest > 0) flow.Height = tallest + 4;
+            }
+
+            int height = Math.Max(control.Height, 26) + 6;
+            var panel = new Panel { Width = 360, Height = height, BackColor = Color.Transparent, Margin = new Padding(0, 1, 0, 1) };
+
+            int labelHeight = Math.Max(24, control.Height);
             if (!string.IsNullOrEmpty(label))
             {
                 panel.Controls.Add(new Label
@@ -765,14 +854,15 @@ namespace WuwaChest
                     Text = label,
                     ForeColor = Ink,
                     AutoSize = false,
-                    Width = 190,
-                    Height = 26,
-                    Location = new Point(0, 6),
+                    Width = 140,
+                    Height = labelHeight,
+                    Location = new Point(0, Math.Max(0, (height - labelHeight) / 2)),
                     TextAlign = ContentAlignment.MiddleLeft,
                     BackColor = Color.Transparent
                 });
             }
-            control.Location = new Point(string.IsNullOrEmpty(label) ? 0 : 196, 4);
+
+            control.Location = new Point(string.IsNullOrEmpty(label) ? 0 : 146, Math.Max(0, (height - control.Height) / 2));
             panel.Controls.Add(control);
             return panel;
         }
@@ -1064,6 +1154,39 @@ namespace WuwaChest
             ApplyBackground();
         }
 
+        /// <summary>
+        /// 滚动时整页重绘：AutoScroll 容器滚动用的是位块搬移，透明白底 + 固定背景图会被搬成一条一条的条纹。
+        /// 滚一下就把所在标签页整体重画一次。
+        /// </summary>
+        private void HookScrollRepaint(Control root)
+        {
+            foreach (Control child in root.Controls)
+            {
+                var scrollable = child as ScrollableControl;
+                if (scrollable != null && scrollable.AutoScroll)
+                {
+                    Control page = scrollable;
+                    while (page != null && !(page is TabPage)) page = page.Parent;
+                    var target = page;
+                    scrollable.Scroll += delegate
+                    {
+                        if (target == null || !target.IsHandleCreated) return;
+                        if (_scrollRepainting) return;
+                        _scrollRepainting = true;
+                        try
+                        {
+                            target.Invalidate(true);
+                            target.Update();
+                        }
+                        finally { _scrollRepainting = false; }
+                    };
+                }
+                HookScrollRepaint(child);
+            }
+        }
+
+        private bool _scrollRepainting;
+
         private static void EnableDoubleBuffer(Control control)
         {
             try
@@ -1169,6 +1292,41 @@ namespace WuwaChest
                 if (source != null) source.Dispose();
             }
             catch { if (source != null) source.Dispose(); }
+        }
+
+        /// <summary>给可滚动容器铺一张和窗口背景完全对齐的图，并设为不透明（否则滚动会出现条纹）</summary>
+        private void PaintScrollPanels(Control root, Bitmap windowBitmap, int winWidth, int winHeight)
+        {
+            foreach (Control child in root.Controls)
+            {
+                var scrollable = child as ScrollableControl;
+                if (scrollable != null && scrollable.AutoScroll)
+                {
+                    try
+                    {
+                        int cw = scrollable.ClientSize.Width;
+                        int ch = scrollable.ClientSize.Height;
+                        if (cw > 100 && ch > 100)
+                        {
+                            Point origin = PointToClient(scrollable.PointToScreen(Point.Empty));
+                            var bmp = new Bitmap(cw, ch);
+                            using (var g = Graphics.FromImage(bmp))
+                            {
+                                g.DrawImage(windowBitmap, new Rectangle(-origin.X, -origin.Y, winWidth, winHeight));
+                                using (var brush = new SolidBrush(Color.FromArgb(190, 255, 252, 246)))
+                                    g.FillRectangle(brush, 0, 0, cw, ch);
+                            }
+                            var old = scrollable.BackgroundImage;
+                            scrollable.BackgroundImage = bmp;
+                            scrollable.BackgroundImageLayout = ImageLayout.None;
+                            scrollable.BackColor = Cream;
+                            if (old != null) old.Dispose();
+                        }
+                    }
+                    catch { }
+                }
+                PaintScrollPanels(child, windowBitmap, winWidth, winHeight);
+            }
         }
 
         // ---------------- 联机房间 ----------------
@@ -1395,6 +1553,128 @@ namespace WuwaChest
         // ------------------------------------------------------------------
         // 跨电脑同步
         // ------------------------------------------------------------------
+        // ------------------------------------------------------------------
+        // 登录 Token（通过 CDP 读写桌宠 cookie）
+        // ------------------------------------------------------------------
+        private int TokenPort()
+        {
+            try { return CdpDiscovery.ResolvePort(_cfg.CdpPort); }
+            catch { return _cfg.CdpPort; }
+        }
+
+        private void ShowTokenExpiry()
+        {
+            int port = TokenPort();
+            string token = TokenTools.ReadToken(port);
+            if (token == null)
+            {
+                MessageBox.Show(this,
+                    "读不到 Token。\r\n\r\n可能原因：桌宠没启动、CDP 没连上（端口 " + port + "），或者当前未登录。",
+                    "登录 Token", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+            var expiry = TokenTools.ReadExpiry(port);
+            MessageBox.Show(this,
+                "Token：" + token.Substring(0, Math.Min(12, token.Length)) + "…（共 " + token.Length + " 字符）\r\n" +
+                TokenTools.DescribeExpiry(expiry) + "\r\n\r\n" +
+                "Token 是账号的登录凭证，看到即可用于登录，别截图外发。",
+                "登录 Token", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+
+        private void RenewToken()
+        {
+            var confirm = MessageBox.Show(this,
+                "续期会调用桌宠自己的 renewTokenIfNeeded 向服务器换取新 Token，有效期顺延约 7 天。\r\n\r\n" +
+                "注意：续期后 Token 可能发生变化，如果另一台电脑在用旧 Token，需要重新提取并导入。\r\n\r\n继续吗？",
+                "续期", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+            if (confirm != DialogResult.Yes) return;
+
+            int port = TokenPort();
+            string result = TokenTools.Renew(port);
+            string text;
+            switch (result)
+            {
+                case "ok":
+                    text = "续期成功。\r\n" + TokenTools.DescribeExpiry(TokenTools.ReadExpiry(port));
+                    break;
+                case "no-cdp":
+                    text = "读不到桌宠页面：CDP 没连上（端口 " + port + "）。";
+                    break;
+                case "no-module":
+                    text = "找不到桌宠的前端模块，续期未执行。";
+                    break;
+                case "no-api":
+                    text = "这个桌宠版本没有暴露 renewTokenIfNeeded，无法手动续期。";
+                    break;
+                case "rejected":
+                    text = "服务器拒绝了续期：Token 可能已失效，需要重新登录。";
+                    break;
+                default:
+                    text = "续期失败（" + result + "），已恢复原来的有效期。";
+                    break;
+            }
+            MessageBox.Show(this, text, "续期",
+                MessageBoxButtons.OK, result == "ok" ? MessageBoxIcon.Information : MessageBoxIcon.Warning);
+        }
+
+        private void CopyToken()
+        {
+            int port = TokenPort();
+            string token = TokenTools.ReadToken(port);
+            if (token == null)
+            {
+                MessageBox.Show(this, "读不到 Token：桌宠没启动、CDP 没连上，或者当前未登录。", "提取",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+            try
+            {
+                Clipboard.SetText(token);
+                MessageBox.Show(this,
+                    "Token 已复制到剪贴板（" + token.Length + " 字符）。\r\n\r\n" +
+                    "把它粘贴到另一台电脑的「Token 登录」就能免扫码登录；\r\n" +
+                    "不要发到群里或粘进不可信的软件，泄露等于账号被接管。",
+                    "提取", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(this, "复制失败：" + ex.Message, "提取",
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+        }
+
+        private void LoginWithToken()
+        {
+            string token = (_tokenInput == null ? "" : _tokenInput.Text).Trim();
+            if (token.Length < 16)
+            {
+                MessageBox.Show(this, "请先把从另一台电脑「提取」的 Token 粘贴到左边的输入框。", "Token 登录",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+            var confirm = MessageBox.Show(this,
+                "会用这个 Token 覆盖当前登录状态，并通知桌宠重新登录。\r\n继续吗？",
+                "Token 登录", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+            if (confirm != DialogResult.Yes) return;
+
+            int port = TokenPort();
+            string result = TokenTools.Login(port, token);
+            if (result == "ok")
+            {
+                if (_tokenInput != null) _tokenInput.Text = "";
+                MessageBox.Show(this, "Token 已写入，桌宠正在重新登录。\r\n稍等几秒，" + TokenTools.DescribeExpiry(TokenTools.ReadExpiry(port)),
+                    "Token 登录", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            else
+            {
+                string text = result == "no-cdp" ? "读不到桌宠页面：CDP 没连上（端口 " + port + "）。"
+                    : result == "no-api" ? "这个桌宠版本没有暴露 applyAuthTokens，无法用 Token 登录。"
+                    : result == "no-module" ? "找不到桌宠的前端模块。"
+                    : "Token 登录失败（" + result + "），请确认 Token 有效。";
+                MessageBox.Show(this, text, "Token 登录", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+        }
+
         private void ExportSync()
         {
             using (var dialog = new SaveFileDialog())

@@ -1,4 +1,4 @@
-// CdpClient.cs — 通过 WebView2 的 DevTools 协议（CDP）读写桌宠页面
+﻿// CdpClient.cs — 通过 WebView2 的 DevTools 协议（CDP）读写桌宠页面
 // 依赖：.NET Framework 4.5+ 自带的 ClientWebSocket / HttpWebRequest，无需第三方库
 using System;
 using System.Collections.Generic;
@@ -705,9 +705,12 @@ namespace WuwaChest
 
         // 截弹窗页（透明背景），裁掉四周透明区域，只留卡片
         // 不截图，直接从页面 DOM 取奖励图 + 文字自己合成（完全不碰截图接口，不会闪）
+        public string LastCardLabel { get; private set; }
+
         public string CaptureCardFromDom(string logsDir, int index, out string reason, int attempts)
         {
             reason = "";
+            LastCardLabel = "";
             var page = FindMainPage();
             if (page == null) { reason = "找不到主页面"; return null; }
 
@@ -730,7 +733,12 @@ namespace WuwaChest
                 else if (!string.IsNullOrEmpty(raw))
                 {
                     string result = RewardCard.Render(raw, logsDir, index, out reason);
-                    if (!string.IsNullOrEmpty(result)) return result;
+                      if (!string.IsNullOrEmpty(result))
+                      {
+                          var labelParts = raw.Split('|');
+                          if (labelParts.Length > 2) LastCardLabel = (labelParts[2] ?? "").Trim();
+                          return result;
+                      }
                 }
                 else if (string.IsNullOrEmpty(reason)) reason = "读不到弹窗数据";
 

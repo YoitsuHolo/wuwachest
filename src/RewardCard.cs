@@ -1,4 +1,4 @@
-// RewardCard.cs — 不截图，直接从页面 DOM 里取奖励图 + 文字，自己拼一张卡片
+﻿// RewardCard.cs — 不截图，直接从页面 DOM 里取奖励图 + 文字，自己拼一张卡片
 // 背景：CDP 的 Page.captureScreenshot 在透明窗口上会强制重合成，导致桌宠闪一下；
 // 改成只读 DOM（Runtime.evaluate + fetch），完全不碰截图接口，就不会闪。
 using System;
@@ -17,8 +17,11 @@ namespace WuwaChest
         public const string Script =
             "(async function(){" +
             "var list=document.querySelectorAll('.chest-reward-popup');var root=null;" +
+            // 优先要「显示着」的那个（有尺寸）
             "for(var i=list.length-1;i>=0;i--){var b=list[i].getBoundingClientRect();" +
             "if(b.width>60&&b.height>60){root=list[i];break;}}" +
+            // 桌宠隐藏时整页没有布局，弹窗宽高都是 0；此时只要它带着图就照样取
+            "if(!root){for(var k=list.length-1;k>=0;k--){if(list[k].querySelector('img')){root=list[k];break;}}}" +
             "if(!root)return 'none';" +
             "var img=root.querySelector('img.prize-image')||root.querySelector('img');" +
             "if(!img||!img.src)return 'noimg';" +
@@ -40,11 +43,26 @@ namespace WuwaChest
             if (parts.Length < 9) { reason = "弹窗数据格式异常"; return null; }
 
             int width, height;
-            if (!int.TryParse(parts[0], out width) || !int.TryParse(parts[1], out height) ||
-                width <= 0 || height <= 0)
+            int.TryParse(parts[0], out width);
+            int.TryParse(parts[1], out height);
+
+            byte[] bytes;
+            try { bytes = Convert.FromBase64String(parts[8]); }
+            catch { reason = "奖励图解码失败"; return null; }
+
+            // 桌宠隐藏时页面没有布局，naturalWidth 可能为 0；直接用解码后的图片定尺寸
+            if (width <= 0 || height <= 0)
             {
-                reason = "奖励图尺寸异常";
-                return null;
+                try
+                {
+                    using (var probeStream = new MemoryStream(bytes))
+                    using (var probeImage = Image.FromStream(probeStream))
+                    {
+                        width = probeImage.Width;
+                        height = probeImage.Height;
+                    }
+                }
+                catch { reason = "奖励图尺寸异常"; return null; }
             }
 
             string label = (parts[2] ?? "").Trim();
@@ -55,10 +73,6 @@ namespace WuwaChest
             Color bg = ParseColor(parts[6], Color.FromArgb(255, 248, 243, 228));
             if (bg.A < 60) bg = Color.FromArgb(255, 248, 243, 228);
             int radius = (int)Math.Max(0, Math.Min(64, ParsePx(parts[7], 26f)));
-
-            byte[] bytes;
-            try { bytes = Convert.FromBase64String(parts[8]); }
-            catch { reason = "奖励图解码失败"; return null; }
 
             string dir = Path.Combine(logsDir, "rewards");
             if (!Directory.Exists(dir)) Directory.CreateDirectory(dir);

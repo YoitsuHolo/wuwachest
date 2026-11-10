@@ -1,4 +1,4 @@
-// ClaimEngine.cs — 后台检测/领取循环（独立线程，所有 UIA 调用都在这里发生）
+﻿// ClaimEngine.cs — 后台检测/领取循环（独立线程，所有 UIA 调用都在这里发生）
 using System;
 using System.IO;
 using System.Threading;
@@ -377,6 +377,11 @@ namespace WuwaChest
 
                     shotRel = backend.CaptureReward(_logsDir, toast, snap, claims + 1);
                     if (toast != null && !string.IsNullOrEmpty(toast.Text)) rewardName = toast.Text.Trim();
+                      // 弹窗文字读不到时，用 DOM 卡片里的标签（新角色/新配件/新表情/重复收集物）
+                      if (string.IsNullOrEmpty(rewardName))
+                      {
+                          try { rewardName = (backend.LastRewardLabel ?? "").Trim(); } catch { }
+                      }
 
                     int remain = totalDelay - shotAt;
                     if (remain > 0) Thread.Sleep(remain);
