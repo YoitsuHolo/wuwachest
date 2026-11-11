@@ -1,4 +1,4 @@
-// MainForm.cs — 面板：状态 / 领取记录 / 设置，加上托盘与自启
+﻿// MainForm.cs — 面板：状态 / 领取记录 / 设置，加上托盘与自启
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -474,6 +474,15 @@ namespace WuwaChest
             loginButton.Margin = new Padding(0, 1, 6, 1);
             tokenLoginPanel.Controls.Add(loginButton);
             settingsFlow.Controls.Add(MakeSettingRow("Token 登录", tokenLoginPanel));
+              var updateButtons = new FlowLayoutPanel
+              {
+                  Width = 204, Height = 28,
+                  FlowDirection = FlowDirection.LeftToRight,
+                  WrapContents = false
+              };
+              var updateButton = MakeButton("检查更新", delegate { CheckUpdates(); });
+              updateButtons.Controls.Add(updateButton);
+              settingsFlow.Controls.Add(MakeSettingRow("版本更新", updateButtons));
 
             var settingsButtons = new FlowLayoutPanel
             {
@@ -1675,6 +1684,17 @@ namespace WuwaChest
             }
         }
 
+        private void CheckUpdates()
+        {
+            Cursor = Cursors.WaitCursor;
+            string message;
+            try { message = UpdateChecker.CheckAndStage(_cfg, _dir); }
+            catch (Exception ex) { message = "检查失败：" + ex.Message; }
+            finally { Cursor = Cursors.Default; }
+
+            Log.Info("检查更新：" + message);
+            MessageBox.Show(this, message, "版本更新", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
         private void ExportSync()
         {
             using (var dialog = new SaveFileDialog())

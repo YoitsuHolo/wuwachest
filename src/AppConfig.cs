@@ -1,4 +1,4 @@
-// AppConfig.cs — 配置读写（兼容旧版 config.json 的字段名，直接手改也能生效）
+﻿// AppConfig.cs — 配置读写（兼容旧版 config.json 的字段名，直接手改也能生效）
 using System;
 using System.Globalization;
 using System.IO;
@@ -30,6 +30,8 @@ namespace WuwaChest
         public bool CdpAutoEnable = true;         // 启动时自动写入调试策略（需要管理员）
         public bool CdpAutoRestartPet = true;     // 写入策略后自动重启桌宠让它生效
         public bool CdpDisableOnExit = true;      // 退出时撤销策略
+        public bool UpdateEnabled = true;                  // 启动时检查 GitHub 更新
+        public string UpdateRepo = "YoitsuHolo/wuwachest"; // 更新来源仓库
 
         private static string Token(string json, string key)
         {
@@ -102,6 +104,8 @@ namespace WuwaChest
             cfg.CdpAutoEnable = Bool(json, "cdpAutoEnable", cfg.CdpAutoEnable);
             cfg.CdpAutoRestartPet = Bool(json, "cdpAutoRestartPet", cfg.CdpAutoRestartPet);
             cfg.CdpDisableOnExit = Bool(json, "cdpDisableOnExit", cfg.CdpDisableOnExit);
+            cfg.UpdateEnabled = Bool(json, "updateEnabled", cfg.UpdateEnabled);
+            cfg.UpdateRepo = Str(json, "updateRepo", cfg.UpdateRepo);
 
 
 
@@ -146,7 +150,9 @@ namespace WuwaChest
             sb.AppendLine("  \"cdpPort\": " + CdpPort + ",");
             sb.AppendLine("  \"cdpAutoEnable\": " + (CdpAutoEnable ? "true" : "false") + ",");
             sb.AppendLine("  \"cdpAutoRestartPet\": " + (CdpAutoRestartPet ? "true" : "false") + ",");
-            sb.AppendLine("  \"cdpDisableOnExit\": " + (CdpDisableOnExit ? "true" : "false"));
+            sb.AppendLine("  \"cdpDisableOnExit\": " + (CdpDisableOnExit ? "true" : "false") + ",");
+            sb.AppendLine("  \"updateEnabled\": " + (UpdateEnabled ? "true" : "false") + ",");
+            sb.AppendLine("  \"updateRepo\": \"" + UpdateRepo + "\"");
 
 
 

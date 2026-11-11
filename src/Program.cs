@@ -1,4 +1,4 @@
-// Program.cs — 入口：命令行诊断模式 + 图形界面
+﻿// Program.cs — 入口：命令行诊断模式 + 图形界面
 using System;
 using System.IO;
 using System.Text;
@@ -91,14 +91,19 @@ namespace WuwaChest
                 Log.Info("Token 检查：端口 " + tokenPort + "｜" + tokenDesc + "｜" + expiryDesc);
                 return 0;
             }
+            if (HasArg(args, "--update-force")) { Native.TryAttachConsole(); string uf = UpdateChecker.CheckAndStage(cfg, dir, true); Log.Info("强制检查更新：" + uf); Console.WriteLine(uf); return 0; }
+            if (HasArg(args, "--update-check")) { Native.TryAttachConsole(); string um = UpdateChecker.CheckAndStage(cfg, dir); Log.Info("更新检查：" + um); Console.WriteLine(um); return 0; }
             if (HasArg(args, "--card-test")) return RunCardTest(cfg);
             if (HasArg(args, "--shot-test")) return RunShotTest(cfg);
+            // 后台检查 GitHub 更新（不阻塞界面）
+            UpdateChecker.CheckAsync(cfg, dir);
             // 启动时自动开启 CDP（策略不存在且未提权时，会请求管理员权限重启自己）
             if (CdpSetup.PrepareAndMaybeElevate(cfg, args)) return 0;
 
             if (once)
             {
                 int onceCode = RunOnce(cfg, dryRun);
+                UpdateChecker.ApplyIfStaged(dir);
                 CdpSetup.RestoreOnExit(cfg);
                 return onceCode;
             }
@@ -145,7 +150,7 @@ namespace WuwaChest
             return false;
         }
 
-        internal const string Version = "2.6";
+        internal const string Version = "2.8";
 
         private static void WriteHelp()
         {
@@ -327,6 +332,7 @@ namespace WuwaChest
                 }
 
                 Application.Run(new MainForm(cfg, startHidden, startTab));
+                UpdateChecker.ApplyIfStaged(AppDomain.CurrentDomain.BaseDirectory);
                 CdpSetup.RestoreOnExit(cfg);
                 GC.KeepAlive(mutex);
             }
