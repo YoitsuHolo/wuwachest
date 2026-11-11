@@ -1,4 +1,4 @@
-﻿// MainForm.cs — 面板：状态 / 领取记录 / 设置，加上托盘与自启
+// MainForm.cs — 面板：状态 / 领取记录 / 设置，加上托盘与自启
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -687,6 +687,7 @@ namespace WuwaChest
             };
             FormClosed += delegate
             {
+                CloudSyncScheduler.Stop();
                 _timer.Stop();
                 _timer.Dispose();
                 if (_trayWatcher != null) { _trayWatcher.DestroyHandle(); _trayWatcher = null; }
@@ -720,6 +721,9 @@ namespace WuwaChest
                 catch { }
             };
             _rooms.Start();
+
+            // 定时云同步（配置里关闭就不跑）
+            CloudSyncScheduler.Start(delegate { return _cfg; }, _dir);
 
             _stats = new StatsStore(_dir);
             if (_chart != null) _chart.Bind(_stats);

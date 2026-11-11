@@ -16,6 +16,8 @@ namespace WuwaChest
         private TextBox _folder;
         private TextBox _proxy;
         private TextBox _token;
+        private CheckBox _autoSync;
+        private TextBox _syncMinutes;
         private Label _status;
 
         public CloudSyncForm(AppConfig cfg, string dataDir, string configPath)
@@ -25,7 +27,7 @@ namespace WuwaChest
             _configPath = configPath;
 
             Text = "云同步（GitHub 私有仓库）";
-            ClientSize = new Size(470, 330);
+            ClientSize = new Size(470, 400);
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;
             MinimizeBox = false;
@@ -40,6 +42,19 @@ namespace WuwaChest
             y = AddRow("代理（可选）", out _proxy, cfg.CloudProxy, y);
             y = AddRow("Token（只存本机）", out _token, "", y);
             _token.UseSystemPasswordChar = true;
+
+            y = AddRow("同步间隔（分钟）", out _syncMinutes, cfg.CloudSyncMinutes < 1 ? "30" : cfg.CloudSyncMinutes.ToString(), y);
+
+            _autoSync = new CheckBox
+            {
+                Text = "定时自动同步（先拉取、再上传）",
+                Checked = cfg.CloudAutoSync,
+                AutoSize = true,
+                Location = new Point(20, y),
+                BackColor = Color.Transparent
+            };
+            Controls.Add(_autoSync);
+            y += _autoSync.Height + 8;
 
             var hint = new Label
             {
@@ -129,6 +144,10 @@ namespace WuwaChest
             _cfg.CloudBranch = string.IsNullOrEmpty(_branch.Text.Trim()) ? "main" : _branch.Text.Trim();
             _cfg.CloudFolder = string.IsNullOrEmpty(_folder.Text.Trim()) ? "wuwachest" : _folder.Text.Trim();
             _cfg.CloudProxy = (_proxy == null ? "" : _proxy.Text.Trim());
+            _cfg.CloudAutoSync = (_autoSync != null) && _autoSync.Checked;
+            int syncMin;
+            if (!int.TryParse((_syncMinutes == null ? "" : _syncMinutes.Text.Trim()), out syncMin) || syncMin < 1) syncMin = 30;
+            _cfg.CloudSyncMinutes = syncMin;
             try
             {
                 _cfg.Save(_configPath);

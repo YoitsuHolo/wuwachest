@@ -68,7 +68,7 @@ namespace WuwaChest
 
             Directory.CreateDirectory(dst);
             int copied = 0;
-            foreach (var f in Directory.GetFiles(src, "*.log"))
+            foreach (var f in Directory.GetFiles(src, "chest-*.log"))
             {
                 File.Copy(f, Path.Combine(dst, Path.GetFileName(f)), true);
                 copied++;
@@ -127,7 +127,7 @@ namespace WuwaChest
             int mergedLines = 0, copiedShots = 0;
             Directory.CreateDirectory(dst);
 
-            foreach (var f in Directory.GetFiles(src, "*.log"))
+            foreach (var f in Directory.GetFiles(src, "chest-*.log"))
             {
                 string target = Path.Combine(dst, Path.GetFileName(f));
                 mergedLines += MergeLog(target, File.ReadAllText(f, Encoding.UTF8));

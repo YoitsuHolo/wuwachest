@@ -36,6 +36,8 @@ namespace WuwaChest
         public string CloudBranch = "main";            // 云同步分支
         public string CloudFolder = "wuwachest";       // 云同步目录
         public string CloudProxy = "";                 // 云同步走 git 时的代理，如 http://127.0.0.1:7890
+        public bool CloudAutoSync = true;              // 定时自动云同步
+        public int CloudSyncMinutes = 30;              // 自动同步间隔（分钟）
 
         private static string Token(string json, string key)
         {
@@ -114,6 +116,8 @@ namespace WuwaChest
             cfg.CloudBranch = Str(json, "cloudBranch", cfg.CloudBranch);
             cfg.CloudFolder = Str(json, "cloudFolder", cfg.CloudFolder);
             cfg.CloudProxy = Str(json, "cloudProxy", cfg.CloudProxy);
+            cfg.CloudAutoSync = Bool(json, "cloudAutoSync", cfg.CloudAutoSync);
+            cfg.CloudSyncMinutes = Int(json, "cloudSyncMinutes", cfg.CloudSyncMinutes);
 
 
 
@@ -164,7 +168,9 @@ namespace WuwaChest
             sb.AppendLine("  \"cloudRepo\": \"" + Esc(CloudRepo) + "\",");
             sb.AppendLine("  \"cloudBranch\": \"" + Esc(CloudBranch) + "\",");
             sb.AppendLine("  \"cloudFolder\": \"" + Esc(CloudFolder) + "\",");
-            sb.AppendLine("  \"cloudProxy\": \"" + Esc(CloudProxy) + "\"");
+            sb.AppendLine("  \"cloudProxy\": \"" + Esc(CloudProxy) + "\",");
+            sb.AppendLine("  \"cloudAutoSync\": " + (CloudAutoSync ? "true" : "false") + ",");
+            sb.AppendLine("  \"cloudSyncMinutes\": " + CloudSyncMinutes);
 
 
 
