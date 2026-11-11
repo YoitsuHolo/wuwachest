@@ -87,7 +87,8 @@ namespace WuwaChest
         public MainForm(AppConfig cfg, bool startHidden, int startTab)
         {
             _cfg = cfg;
-            _dir = Application.StartupPath;
+            // 数据目录：默认 %LOCALAPPDATA%\WuwaChest（放 portable.txt 则回到 exe 同目录）
+            _dir = AppPaths.DataDir;
             _configPath = Path.Combine(_dir, "config.json");
             _logsDir = Path.Combine(_dir, "logs");
             _engine = new ClaimEngine(cfg, _logsDir);
