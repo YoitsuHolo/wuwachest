@@ -15,10 +15,12 @@ namespace WuwaChest
         [STAThread]
         private static int Main(string[] args)
         {
-            string dir = AppDomain.CurrentDomain.BaseDirectory;
+            // 数据默认放 %LOCALAPPDATA%\WuwaChest，exe 可以单独拷来拷去；
+            // 在 exe 旁放 portable.txt 则改用 exe 同目录。
+            string dir = AppPaths.DataDir;
+            AppPaths.Migrate(dir);
             string configPath = Path.Combine(dir, "config.json");
             string logsDir = Path.Combine(dir, "logs");
-
             var cfg = AppConfig.Load(configPath);
 
             if (HasArg(args, "--help") || HasArg(args, "-h") || HasArg(args, "-?"))

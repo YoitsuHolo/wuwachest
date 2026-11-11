@@ -1,6 +1,5 @@
-// UpdateChecker.cs — 从 GitHub 仓库检查并下载新版 WuwaChest.exe
-// 判断依据是版本号（仓库 src/Program.cs 里的 Version 常量 vs 本程序 Program.Version）。
-// 只替换 exe，不同步源码，避免覆盖本地改动。
+// UpdateChecker.cs — 从 GitHub Release 检查并下载新版 WuwaChest.exe
+// 版本号来自 Release 的 tag（如 v2.8），仓库里不再放 exe 二进制。
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -15,12 +14,10 @@ namespace WuwaChest
     {
         public const string DefaultRepo = "YoitsuHolo/wuwachest";
 
-        /// <summary>最近一次检查的说明（给界面/日志用）</summary>
         public static string Status = "";
         public static bool StagedUpdate;
 
         // ------------------------------------------------------------------
-        /// <summary>启动时后台检查：6 小时内查过就跳过，不阻塞界面</summary>
         public static void CheckAsync(AppConfig cfg, string appDir)
         {
             if (cfg == null || !cfg.UpdateEnabled) return;
@@ -59,32 +56,32 @@ namespace WuwaChest
             return CheckAndStage(cfg, appDir, false);
         }
 
-        /// <summary>
-        /// 同步检查：比对版本号，仓库更新就下载到 WuwaChest.new.exe。
-        /// force = true 时忽略版本判断（调试用）。
-        /// </summary>
+        /// <summary>比对版本号；Release 有更新的 exe 就下载到 WuwaChest.new.exe</summary>
         public static string CheckAndStage(AppConfig cfg, string appDir, bool force)
         {
             string repo = (cfg == null || string.IsNullOrEmpty(cfg.UpdateRepo)) ? DefaultRepo : cfg.UpdateRepo.Trim();
-            string localExe = Path.Combine(appDir, "WuwaChest.exe");
+            string exeDir = AppPaths.ExeDir;
+            string localExe = Path.Combine(exeDir, "WuwaChest.exe");
             if (!File.Exists(localExe)) { Status = "找不到本机 WuwaChest.exe"; return Status; }
 
             ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
-            string api = "https://api.github.com/repos/" + repo + "/contents/WuwaChest.exe";
-            string json = HttpGet(api, 15000);
-            if (json == null) { Status = "连不上 GitHub，稍后再试"; return Status; }
 
-            long remoteSize = JsonLong(json, "size");
-            if (remoteSize <= 0) { Status = "仓库里没有 WuwaChest.exe"; return Status; }
+            string remoteVersion = "";
+            string assetUrl = "";
+            long assetSize = 0;
 
-            string remoteVersion = ReadRemoteVersion(repo);
-            string localVersion = Program.Version;
-            if (string.IsNullOrEmpty(remoteVersion))
+            string releaseJson = HttpGet("https://api.github.com/repos/" + repo + "/releases/latest", 15000);
+            if (releaseJson != null)
             {
-                Status = "读不到仓库版本号，跳过";
-                return Status;
+                remoteVersion = ParseTagVersion(releaseJson);
+                ParseExeAsset(releaseJson, out assetUrl, out assetSize);
             }
 
+            // 还没发过 Release 时，退回读源码里的 Version 常量（只能提示，不能下载）
+            if (string.IsNullOrEmpty(remoteVersion)) remoteVersion = ReadSourceVersion(repo);
+            if (string.IsNullOrEmpty(remoteVersion)) { Status = "读不到仓库版本号，跳过"; return Status; }
+
+            string localVersion = Program.Version;
             int cmp = CompareVersion(remoteVersion, localVersion);
             if (cmp <= 0 && !force)
             {
@@ -93,27 +90,33 @@ namespace WuwaChest
                 return Status;
             }
 
-            string staged = Path.Combine(appDir, "WuwaChest.new.exe");
+            if (string.IsNullOrEmpty(assetUrl))
+            {
+                StagedUpdate = false;
+                Status = "仓库有新版本 " + remoteVersion + "，但 Release 里没有 exe 资源";
+                return Status;
+            }
+
+            string staged = Path.Combine(exeDir, "WuwaChest.new.exe");
             try { if (File.Exists(staged)) File.Delete(staged); } catch { }
 
-            // raw.githubusercontent 在这边只有几 KB/s，改走 codeload 的 zip（实测 1MB/秒）
-            if (!DownloadFromZip(repo, staged))
+            if (!Download(assetUrl, staged, 180000))
             {
                 Status = "下载失败，稍后再试";
                 return Status;
             }
 
             long got = new FileInfo(staged).Length;
-            if (got != remoteSize)
+            if (assetSize > 0 && got != assetSize)
             {
                 try { File.Delete(staged); } catch { }
-                Status = "下载不完整（" + FormatSize(got) + " / " + FormatSize(remoteSize) + "），已丢弃";
+                Status = "下载不完整（" + FormatSize(got) + " / " + FormatSize(assetSize) + "），已丢弃";
                 return Status;
             }
 
             StagedUpdate = true;
             Status = "发现新版本 " + localVersion + " → " + remoteVersion +
-                     "（" + FormatSize(remoteSize) + "），已下载，退出时自动替换";
+                     "（" + FormatSize(got) + "），已下载，退出时自动替换";
             return Status;
         }
 
@@ -122,10 +125,11 @@ namespace WuwaChest
         {
             try
             {
-                string staged = Path.Combine(appDir, "WuwaChest.new.exe");
+                string exeDir = AppPaths.ExeDir;
+                string staged = Path.Combine(exeDir, "WuwaChest.new.exe");
                 if (!File.Exists(staged)) return false;
 
-                string batch = Path.Combine(appDir, "apply-update.cmd");
+                string batch = Path.Combine(exeDir, "apply-update.cmd");
                 var sb = new StringBuilder();
                 sb.AppendLine("@echo off");
                 sb.AppendLine("setlocal");
@@ -146,7 +150,7 @@ namespace WuwaChest
                 {
                     UseShellExecute = false,
                     CreateNoWindow = true,
-                    WorkingDirectory = appDir
+                    WorkingDirectory = exeDir
                 });
                 Log.Action("已安排更新：退出后自动替换 WuwaChest.exe 并重启（备份 WuwaChest.backup.exe）");
                 return true;
@@ -159,8 +163,38 @@ namespace WuwaChest
         }
 
         // ------------------------------------------------------------------
-        /// <summary>从仓库 src/Program.cs 里读 Version 常量（取不到返回空）</summary>
-        private static string ReadRemoteVersion(string repo)
+        private static string ParseTagVersion(string releaseJson)
+        {
+            var m = Regex.Match(releaseJson, "\"tag_name\"\\s*:\\s*\"([^\"]+)\"");
+            if (!m.Success) return "";
+            return m.Groups[1].Value.Trim().TrimStart('v', 'V');
+        }
+
+        /// <summary>在 assets 里找 .exe（优先名字正好是 WuwaChest.exe 的）</summary>
+        private static void ParseExeAsset(string releaseJson, out string url, out long size)
+        {
+            url = "";
+            size = 0;
+
+            var best = Regex.Match(releaseJson,
+                "\"name\"\\s*:\\s*\"WuwaChest\\.exe\"[\\s\\S]{0,600}?\"browser_download_url\"\\s*:\\s*\"([^\"]+)\"");
+            var any = Regex.Match(releaseJson,
+                "\"name\"\\s*:\\s*\"([^\"]+\\.exe)\"[\\s\\S]{0,600}?\"browser_download_url\"\\s*:\\s*\"([^\"]+)\"");
+
+            string chosen = "";
+            if (best.Success) chosen = best.Groups[1].Value;
+            else if (any.Success) chosen = any.Groups[2].Value;
+
+            if (chosen.Length == 0) return;
+            url = chosen;
+
+            var sizeMatch = Regex.Match(releaseJson, "\"size\"\\s*:\\s*(\\d+)");
+            long v;
+            if (sizeMatch.Success && long.TryParse(sizeMatch.Groups[1].Value, out v)) size = v;
+        }
+
+        /// <summary>没发 Release 时的兜底：读仓库 src/Program.cs 的 Version</summary>
+        private static string ReadSourceVersion(string repo)
         {
             try
             {
@@ -180,7 +214,6 @@ namespace WuwaChest
             catch { return ""; }
         }
 
-        /// <summary>比较版本号；返回 &gt;0 表示 remote 更新</summary>
         private static int CompareVersion(string remote, string local)
         {
             var r = SplitVersion(remote);
@@ -208,7 +241,6 @@ namespace WuwaChest
             return list.ToArray();
         }
 
-        // ------------------------------------------------------------------
         private static string HttpGet(string url, int timeoutMs)
         {
             try
@@ -223,39 +255,6 @@ namespace WuwaChest
                     return reader.ReadToEnd();
             }
             catch { return null; }
-        }
-
-        /// <summary>下载仓库 zip 并从中取出 WuwaChest.exe</summary>
-        private static bool DownloadFromZip(string repo, string destPath)
-        {
-            string zipPath = destPath + ".zip";
-            try
-            {
-                string url = "https://codeload.github.com/" + repo + "/zip/refs/heads/main";
-                if (!Download(url, zipPath, 120000)) return false;
-
-                using (var zip = System.IO.Compression.ZipFile.OpenRead(zipPath))
-                {
-                    System.IO.Compression.ZipArchiveEntry found = null;
-                    foreach (var entry in zip.Entries)
-                    {
-                        if (entry.FullName.EndsWith("WuwaChest.exe", StringComparison.OrdinalIgnoreCase) &&
-                            entry.FullName.IndexOf("/src/", StringComparison.OrdinalIgnoreCase) < 0)
-                        {
-                            found = entry;
-                            break;
-                        }
-                    }
-                    if (found == null) return false;
-
-                    using (var input = found.Open())
-                    using (var output = File.Create(destPath))
-                        input.CopyTo(output);
-                }
-                return true;
-            }
-            catch { return false; }
-            finally { try { if (File.Exists(zipPath)) File.Delete(zipPath); } catch { } }
         }
 
         private static bool Download(string url, string path, int timeoutMs)
@@ -279,13 +278,6 @@ namespace WuwaChest
                 return true;
             }
             catch { return false; }
-        }
-
-        private static long JsonLong(string json, string key)
-        {
-            var m = Regex.Match(json, "\"" + key + "\"\\s*:\\s*(\\d+)");
-            long v;
-            return m.Success && long.TryParse(m.Groups[1].Value, out v) ? v : 0;
         }
 
         private static string FormatSize(long bytes)

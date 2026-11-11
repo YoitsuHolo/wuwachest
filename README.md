@@ -193,3 +193,28 @@ Windows 10 / 11，.NET Framework 4.7 或更高（Win10 1803 之后系统自带�
 另外要感谢 Wuwa Tappo 本身——它的页面结构是这个工具能工作的基础。
 
 界面没有用任何第三方 UI 库：毛玻璃面板、折线柱状图、标签控件都是自己画的。
+
+---
+
+## 数据存放位置（v2.9 起）
+
+程序是**单文件**的：`WuwaChest.exe` 自带图标和默认背景，拷到任何目录都能直接运行。
+
+运行时数据默认放在：
+
+```
+%LOCALAPPDATA%\WuwaChest\
+├─ config.json      配置
+├─ rooms.txt        联机房间历史
+├─ stats.txt        字符数统计
+├─ logs\            日志（chest-yyyyMMdd.log）与领奖截图（rewards\）
+└─ update-state.txt 更新检查节流记录
+```
+
+**便携模式**：如果想继续把数据放在 exe 同目录（比如放 U 盘），在 exe 旁边新建一个空的 `portable.txt` 即可。
+
+**从旧版升级**：第一次运行时，若新目录还没有 `config.json`，程序会把 exe 同目录的
+`config.json`、`rooms.txt`、`stats.txt` 和 `logs\` 复制过去（原文件保留，不会删）。
+
+> 自动更新替换的仍然是 exe 本身（`WuwaChest.exe` / 备份 `WuwaChest.backup.exe`），
+> 暂存文件 `WuwaChest.new.exe` 和替换脚本都放在 exe 所在目录。

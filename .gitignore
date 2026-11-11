@@ -6,3 +6,8 @@ stats.txt
 *.bak
 *.log
 background.jpg
+WuwaChest.exe
+WuwaChest.new.exe
+WuwaChest.backup.exe
+apply-update.cmd
+update-state.txt
