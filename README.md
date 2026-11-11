@@ -33,6 +33,9 @@
 **Token 工具**
 查看登录 Token 的有效期、手动续期、复制到剪贴板，以及用 Token 登录（换机免重新扫码）。实现方式是不保存 Token，只在需要时从页面里读它、调它自己的续期函数。
 
+**自动更新**
+启动时在后台检查 GitHub Release 的版本号（6 小时内最多查一次），发现新版本就下载，退出时自动替换并重启，旧版备份为 `WuwaChest.backup.exe`。设置页也有「检查更新」按钮可手动触发。
+
 **其他**
 托盘常驻、单实例、开机自启、领取成功通知、日志按天切割。
 
@@ -62,19 +65,24 @@ Windows 10 / 11，.NET Framework 4.7 或更高（Win10 1803 之后系统自带�
 
 ## 快速开始
 
-把 `WuwaChest.exe` 放到一个固定目录，双击运行，面板会出现在屏幕中间。
+从 [Releases](https://github.com/YoitsuHolo/wuwachest/releases) 下载：
+
+- **`WuwaChest.exe`** —— 单文件，放到任意目录双击即可运行；
+- **`WuwaChest-v<版本>.zip`** —— exe + 说明，方便打包带走。
+
+exe 自带图标和默认背景，**不需要任何附带文件**；运行时数据统一放在 `%LOCALAPPDATA%\WuwaChest\`（见下文）。
 
 第一次启动可能会弹一次 UAC：工具需要写一条 WebView2 的调试端口策略，必要时会重启一次桌宠（约 4 秒），这是正常的。
 
 之后在「设置」里确认「优先用 CDP 读页面」是勾上的，回到「状态」点「开始监控」即可。关窗口会收进托盘，右键托盘图标才能退出。
 
-命令行也支持一些常用参数：直接运行打开面板，`--tray` 只驻留托盘，`--history` / `--settings` / `--tools` / `--stats` 直接切到对应页，`--probe` 打印识别到的界面元素用于排障，`--once` 检测一次，`--boost 1000` 加字符，`--sync-export` / `--sync-import` 同步数据，`--set-background` 设置背景图。
+命令行也支持一些常用参数：直接运行打开面板，`--tray` 只驻留托盘，`--history` / `--settings` / `--tools` / `--stats` 直接切到对应页，`--probe` 打印识别到的界面元素用于排障，`--once` 检测一次，`--boost 1000` 加字符，`--sync-export` / `--sync-import` 同步数据，`--set-background` 设置背景图，`--update-check` / `--update-force` 检查或强制下载更新，`--token-show` 查看 Token 有效期，`--card-test` 诊断奖励图合成。
 
 ---
 
 ## 配置文件
 
-程序第一次运行会在 exe 同目录生成 `config.json`，改完在「设置」页点「保存并应用」。
+配置文件是 `%LOCALAPPDATA%\WuwaChest\config.json`（便携模式下在 exe 同目录），改完在「设置」页点「保存并应用」。
 
 | 键 | 默认 | 说明 |
 | --- | --- | --- |
@@ -94,14 +102,33 @@ Windows 10 / 11，.NET Framework 4.7 或更高（Win10 1803 之后系统自带�
 | `cdpAutoEnable` | true | 启动时自动检查并写入调试策略 |
 | `cdpAutoRestartPet` | true | 写入策略后自动重启桌宠让它生效 |
 | `cdpDisableOnExit` | true | 退出时撤销「本次自己写的」策略 |
+| `updateEnabled` | true | 启动时自动检查 GitHub Release 更新 |
+| `updateRepo` | `YoitsuHolo/wuwachest` | 更新来源仓库 |
 
 两个固定值不需要配置：领取一次消耗 1000 字符；没有 CDP 时的兜底检测间隔 30 分钟。
 
 ---
 
-## 生成的文件
+## 数据存放位置
 
-都在 exe 同目录：日志在 `logs` 目录（每天一个文件，奖励图在 `logs/rewards`），房间历史在 `rooms.txt`，字符数统计在 `stats.txt`，配置是 `config.json`。这些都不会进仓库。
+程序是**单文件**的：`WuwaChest.exe` 自带图标和默认背景，拷到任何目录都能直接运行。
+
+运行时数据默认放在：
+
+```
+%LOCALAPPDATA%\WuwaChest\
+├─ config.json      配置
+├─ rooms.txt        联机房间历史
+├─ stats.txt        字符数统计
+├─ logs\            日志（chest-yyyyMMdd.log）与领奖截图（rewards\）
+└─ update-state.txt 更新检查节流记录
+```
+
+**便携模式**：如果想继续把数据放在 exe 同目录（比如放 U 盘），在 exe 旁边新建一个空的 `portable.txt` 即可。
+
+**从旧版升级**：第一次运行时，若新目录还没有 `config.json`，程序会把 exe 同目录的 `config.json`、`rooms.txt`、`stats.txt` 和 `logs\` 复制过去（原文件保留，不会删）。
+
+> 自动更新替换的仍然是 exe 本身（`WuwaChest.exe`，备份 `WuwaChest.backup.exe`），暂存文件 `WuwaChest.new.exe` 和替换脚本都放在 exe 所在目录。
 
 ---
 
@@ -130,6 +157,14 @@ Windows 10 / 11，.NET Framework 4.7 或更高（Win10 1803 之后系统自带�
 ---
 
 ## 更新日志
+
+**v2.8**
+- 新增自动更新：按版本号比对 GitHub Release，发现新版自动下载、退出时替换并重启（旧版备份为 `WuwaChest.backup.exe`）
+- exe 不再提交到仓库，只放在 GitHub Release（可直接下 exe，或下 zip）
+- 单文件化：运行时数据统一放 `%LOCALAPPDATA%\WuwaChest`，exe 可单独拷到任意目录；放 `portable.txt` 则回到便携模式
+- 修复桌宠隐藏时领不到奖励卡片：弹窗 0×0 时不再被尺寸条件过滤，尺寸改从解码后的图片取
+- 奖励名支持「重复收集物」，不再显示成「有截图」
+
 
 **v2.6**
 - 修复所有按钮文字/边框被裁切：按钮尺寸改为按当前字体计算，行容器高度按子控件撑开
@@ -196,25 +231,3 @@ Windows 10 / 11，.NET Framework 4.7 或更高（Win10 1803 之后系统自带�
 
 ---
 
-## 数据存放位置（v2.9 起）
-
-程序是**单文件**的：`WuwaChest.exe` 自带图标和默认背景，拷到任何目录都能直接运行。
-
-运行时数据默认放在：
-
-```
-%LOCALAPPDATA%\WuwaChest\
-├─ config.json      配置
-├─ rooms.txt        联机房间历史
-├─ stats.txt        字符数统计
-├─ logs\            日志（chest-yyyyMMdd.log）与领奖截图（rewards\）
-└─ update-state.txt 更新检查节流记录
-```
-
-**便携模式**：如果想继续把数据放在 exe 同目录（比如放 U 盘），在 exe 旁边新建一个空的 `portable.txt` 即可。
-
-**从旧版升级**：第一次运行时，若新目录还没有 `config.json`，程序会把 exe 同目录的
-`config.json`、`rooms.txt`、`stats.txt` 和 `logs\` 复制过去（原文件保留，不会删）。
-
-> 自动更新替换的仍然是 exe 本身（`WuwaChest.exe` / 备份 `WuwaChest.backup.exe`），
-> 暂存文件 `WuwaChest.new.exe` 和替换脚本都放在 exe 所在目录。
