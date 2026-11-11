@@ -1,4 +1,4 @@
-﻿// CloudSync.cs — 把日志/截图同步到 GitHub 私有仓库（双向，走本机 git）
+// CloudSync.cs — 把日志/截图同步到 GitHub 私有仓库（双向，走本机 git）
 // token 用 DPAPI 加密存在数据目录的 cloud-token.bin，不写进 config.json
 using System;
 using System.Collections.Generic;
@@ -13,6 +13,9 @@ namespace WuwaChest
     {
         private const string TokenFile = "cloud-token.bin";
         private const string RepoDirName = "cloud-repo";
+
+        // 当前这次同步用的代理（空=不走代理）；由 Upload/Pull 按配置设置
+        private static string _proxy = "";
 
         // ------------------------------------------------------------------
         // token（DPAPI，当前用户）
@@ -51,6 +54,7 @@ namespace WuwaChest
             string repo = (cfg.CloudRepo ?? "").Trim();
             string branch = string.IsNullOrEmpty(cfg.CloudBranch) ? "main" : cfg.CloudBranch.Trim();
             string folder = NormalizeFolder(cfg.CloudFolder);
+            _proxy = (cfg.CloudProxy ?? "").Trim();
             if (token.Length == 0) return "还没填 Token";
             if (repo.IndexOf('/') <= 0) return "仓库要写成 owner/repo";
 
@@ -105,6 +109,7 @@ namespace WuwaChest
             string repo = (cfg.CloudRepo ?? "").Trim();
             string branch = string.IsNullOrEmpty(cfg.CloudBranch) ? "main" : cfg.CloudBranch.Trim();
             string folder = NormalizeFolder(cfg.CloudFolder);
+            _proxy = (cfg.CloudProxy ?? "").Trim();
             if (token.Length == 0) return "还没填 Token";
             if (repo.IndexOf('/') <= 0) return "仓库要写成 owner/repo";
 
@@ -224,7 +229,12 @@ namespace WuwaChest
             var sb = new StringBuilder();
             try
             {
-                var psi = new ProcessStartInfo(ResolveGit(), args)
+                // 有配代理就通过 git -c 注入，避免依赖全局 git 配置
+                string gitArgs = args;
+                if (!string.IsNullOrEmpty(_proxy) && args.IndexOf("-c http.proxy", StringComparison.Ordinal) < 0)
+                    gitArgs = "-c http.proxy=" + _proxy + " -c https.proxy=" + _proxy + " " + args;
+
+                var psi = new ProcessStartInfo(ResolveGit(), gitArgs)
                 {
                     WorkingDirectory = workDir,
                     UseShellExecute = false,
@@ -233,6 +243,11 @@ namespace WuwaChest
                     CreateNoWindow = true
                 };
                 psi.EnvironmentVariables["GIT_TERMINAL_PROMPT"] = "0";
+                if (!string.IsNullOrEmpty(_proxy))
+                {
+                    psi.EnvironmentVariables["HTTP_PROXY"] = _proxy;
+                    psi.EnvironmentVariables["HTTPS_PROXY"] = _proxy;
+                }
                 using (var p = Process.Start(psi))
                 {
                     sb.Append(p.StandardOutput.ReadToEnd());

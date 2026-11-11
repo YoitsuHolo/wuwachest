@@ -1,4 +1,4 @@
-﻿// AppConfig.cs — 配置读写（兼容旧版 config.json 的字段名，直接手改也能生效）
+// AppConfig.cs — 配置读写（兼容旧版 config.json 的字段名，直接手改也能生效）
 using System;
 using System.Globalization;
 using System.IO;
@@ -35,6 +35,7 @@ namespace WuwaChest
         public string CloudRepo = "";                  // 云同步：owner/repo
         public string CloudBranch = "main";            // 云同步分支
         public string CloudFolder = "wuwachest";       // 云同步目录
+        public string CloudProxy = "";                 // 云同步走 git 时的代理，如 http://127.0.0.1:7890
 
         private static string Token(string json, string key)
         {
@@ -112,6 +113,7 @@ namespace WuwaChest
             cfg.CloudRepo = Str(json, "cloudRepo", cfg.CloudRepo);
             cfg.CloudBranch = Str(json, "cloudBranch", cfg.CloudBranch);
             cfg.CloudFolder = Str(json, "cloudFolder", cfg.CloudFolder);
+            cfg.CloudProxy = Str(json, "cloudProxy", cfg.CloudProxy);
 
 
 
@@ -161,7 +163,8 @@ namespace WuwaChest
             sb.AppendLine("  \"updateRepo\": \"" + UpdateRepo + "\",");
             sb.AppendLine("  \"cloudRepo\": \"" + Esc(CloudRepo) + "\",");
             sb.AppendLine("  \"cloudBranch\": \"" + Esc(CloudBranch) + "\",");
-            sb.AppendLine("  \"cloudFolder\": \"" + Esc(CloudFolder) + "\"");
+            sb.AppendLine("  \"cloudFolder\": \"" + Esc(CloudFolder) + "\",");
+            sb.AppendLine("  \"cloudProxy\": \"" + Esc(CloudProxy) + "\"");
 
 
 

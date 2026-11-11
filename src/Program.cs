@@ -1,4 +1,4 @@
-﻿// Program.cs — 入口：命令行诊断模式 + 图形界面
+// Program.cs — 入口：命令行诊断模式 + 图形界面
 using System;
 using System.IO;
 using System.Text;
@@ -175,7 +175,7 @@ namespace WuwaChest
             return false;
         }
 
-        internal const string Version = "2.11";
+        internal const string Version = "2.12";
 
         private static void WriteHelp()
         {

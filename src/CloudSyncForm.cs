@@ -14,6 +14,7 @@ namespace WuwaChest
         private TextBox _repo;
         private TextBox _branch;
         private TextBox _folder;
+        private TextBox _proxy;
         private TextBox _token;
         private Label _status;
 
@@ -36,6 +37,7 @@ namespace WuwaChest
             y = AddRow("仓库（owner/repo）", out _repo, cfg.CloudRepo, y);
             y = AddRow("分支", out _branch, string.IsNullOrEmpty(cfg.CloudBranch) ? "main" : cfg.CloudBranch, y);
             y = AddRow("云端目录", out _folder, string.IsNullOrEmpty(cfg.CloudFolder) ? "wuwachest" : cfg.CloudFolder, y);
+            y = AddRow("代理（可选）", out _proxy, cfg.CloudProxy, y);
             y = AddRow("Token（只存本机）", out _token, "", y);
             _token.UseSystemPasswordChar = true;
 
@@ -126,6 +128,7 @@ namespace WuwaChest
             _cfg.CloudRepo = _repo.Text.Trim();
             _cfg.CloudBranch = string.IsNullOrEmpty(_branch.Text.Trim()) ? "main" : _branch.Text.Trim();
             _cfg.CloudFolder = string.IsNullOrEmpty(_folder.Text.Trim()) ? "wuwachest" : _folder.Text.Trim();
+            _cfg.CloudProxy = (_proxy == null ? "" : _proxy.Text.Trim());
             try
             {
                 _cfg.Save(_configPath);
