@@ -1,4 +1,4 @@
-// UpdateChecker.cs — 从 GitHub Release 检查并下载新版 WuwaChest.exe
+﻿// UpdateChecker.cs — 从 GitHub Release 检查并下载新版 WuwaChest.exe
 // 版本号来自 Release 的 tag（如 v2.8），仓库里不再放 exe 二进制。
 using System;
 using System.Diagnostics;
@@ -176,21 +176,27 @@ namespace WuwaChest
             url = "";
             size = 0;
 
-            var best = Regex.Match(releaseJson,
-                "\"name\"\\s*:\\s*\"WuwaChest\\.exe\"[\\s\\S]{0,600}?\"browser_download_url\"\\s*:\\s*\"([^\"]+)\"");
-            var any = Regex.Match(releaseJson,
-                "\"name\"\\s*:\\s*\"([^\"]+\\.exe)\"[\\s\\S]{0,600}?\"browser_download_url\"\\s*:\\s*\"([^\"]+)\"");
+            // GitHub 的 asset 对象里，"name" 和 "browser_download_url" 之间隔着一大段 uploader 信息
+            // （实测 1200+ 字符），所以不能用一个固定的窗口去匹配：
+            // 先找每个 download_url，再往前回溯最近的 "name"。
+            foreach (Match m in Regex.Matches(releaseJson, "\"browser_download_url\"\\s*:\\s*\"([^\"]+)\""))
+            {
+                int at = m.Index;
+                int from = Math.Max(0, at - 6000);
+                string window = releaseJson.Substring(from, at - from);
 
-            string chosen = "";
-            if (best.Success) chosen = best.Groups[1].Value;
-            else if (any.Success) chosen = any.Groups[2].Value;
+                var names = Regex.Matches(window, "\"name\"\\s*:\\s*\"([^\"]+)\"");
+                if (names.Count == 0) continue;
+                string name = names[names.Count - 1].Groups[1].Value;
+                if (!name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase)) continue;
 
-            if (chosen.Length == 0) return;
-            url = chosen;
+                url = m.Groups[1].Value.Replace("\\/", "/");
 
-            var sizeMatch = Regex.Match(releaseJson, "\"size\"\\s*:\\s*(\\d+)");
-            long v;
-            if (sizeMatch.Success && long.TryParse(sizeMatch.Groups[1].Value, out v)) size = v;
+                var sizes = Regex.Matches(window, "\"size\"\\s*:\\s*(\\d+)");
+                long v;
+                if (sizes.Count > 0 && long.TryParse(sizes[sizes.Count - 1].Groups[1].Value, out v)) size = v;
+                return;
+            }
         }
 
         /// <summary>没发 Release 时的兜底：读仓库 src/Program.cs 的 Version</summary>

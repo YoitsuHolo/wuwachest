@@ -158,6 +158,10 @@ exe 自带图标和默认背景，**不需要任何附带文件**；运行时数
 
 ## 更新日志
 
+**v2.10**
+- 修复自动更新找不到 Release 里的 exe 资源：GitHub 的 asset JSON 中 `name` 与 `browser_download_url` 相隔超过 1200 字符，原来的固定窗口匹配失效，改为回溯查找
+
+
 **v2.9**
 - 修复界面侧仍按 exe 目录读写数据的问题：导入同步包、房间历史、字符统计现在都落在 `%LOCALAPPDATA%\WuwaChest`，不会再在 exe 旁边生成 `config.json` / `logs`
 

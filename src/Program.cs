@@ -152,7 +152,7 @@ namespace WuwaChest
             return false;
         }
 
-        internal const string Version = "2.9";
+        internal const string Version = "2.10";
 
         private static void WriteHelp()
         {
