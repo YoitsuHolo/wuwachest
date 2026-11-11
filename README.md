@@ -158,6 +158,10 @@ exe 自带图标和默认背景，**不需要任何附带文件**；运行时数
 
 ## 更新日志
 
+**v2.9**
+- 修复界面侧仍按 exe 目录读写数据的问题：导入同步包、房间历史、字符统计现在都落在 `%LOCALAPPDATA%\WuwaChest`，不会再在 exe 旁边生成 `config.json` / `logs`
+
+
 **v2.8**
 - 新增自动更新：按版本号比对 GitHub Release，发现新版自动下载、退出时替换并重启（旧版备份为 `WuwaChest.backup.exe`）
 - exe 不再提交到仓库，只放在 GitHub Release（可直接下 exe，或下 zip）
