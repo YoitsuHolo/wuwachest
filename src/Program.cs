@@ -94,7 +94,30 @@ namespace WuwaChest
                 return 0;
             }
             if (HasArg(args, "--update-force")) { Native.TryAttachConsole(); string uf = UpdateChecker.CheckAndStage(cfg, dir, true); Log.Info("强制检查更新：" + uf); Console.WriteLine(uf); return 0; }
-            if (HasArg(args, "--update-check")) { Native.TryAttachConsole(); string um = UpdateChecker.CheckAndStage(cfg, dir); Log.Info("更新检查：" + um); Console.WriteLine(um); return 0; }
+            if (HasArg(args, "--cloud-token"))
+            {
+                Native.TryAttachConsole();
+                string tk = ArgString(args, "--cloud-token");
+                if (string.IsNullOrEmpty(tk)) { Console.WriteLine("用法: --cloud-token <token>"); return 1; }
+                CloudSync.SaveToken(dir, tk.Trim());
+                Console.WriteLine("token 已保存（DPAPI 加密）");
+                return 0;
+            }
+            if (HasArg(args, "--cloud-upload") || HasArg(args, "--cloud-pull"))
+            {
+                Native.TryAttachConsole();
+                string result;
+                try
+                {
+                    result = HasArg(args, "--cloud-upload")
+                        ? CloudSync.Upload(cfg, dir)
+                        : CloudSync.Pull(cfg, dir);
+                }
+                catch (Exception ex) { result = "云同步异常：" + ex.GetType().Name + "：" + ex.Message; }
+                Log.Info("云同步：" + result);
+                Console.WriteLine(result);
+                return 0;
+            }            if (HasArg(args, "--update-check")) { Native.TryAttachConsole(); string um = UpdateChecker.CheckAndStage(cfg, dir); Log.Info("更新检查：" + um); Console.WriteLine(um); return 0; }
             if (HasArg(args, "--card-test")) return RunCardTest(cfg);
             if (HasArg(args, "--shot-test")) return RunShotTest(cfg);
             // 后台检查 GitHub 更新（不阻塞界面）
@@ -152,7 +175,7 @@ namespace WuwaChest
             return false;
         }
 
-        internal const string Version = "2.10";
+        internal const string Version = "2.11";
 
         private static void WriteHelp()
         {

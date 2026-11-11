@@ -32,6 +32,9 @@ namespace WuwaChest
         public bool CdpDisableOnExit = true;      // 退出时撤销策略
         public bool UpdateEnabled = true;                  // 启动时检查 GitHub 更新
         public string UpdateRepo = "YoitsuHolo/wuwachest"; // 更新来源仓库
+        public string CloudRepo = "";                  // 云同步：owner/repo
+        public string CloudBranch = "main";            // 云同步分支
+        public string CloudFolder = "wuwachest";       // 云同步目录
 
         private static string Token(string json, string key)
         {
@@ -106,6 +109,9 @@ namespace WuwaChest
             cfg.CdpDisableOnExit = Bool(json, "cdpDisableOnExit", cfg.CdpDisableOnExit);
             cfg.UpdateEnabled = Bool(json, "updateEnabled", cfg.UpdateEnabled);
             cfg.UpdateRepo = Str(json, "updateRepo", cfg.UpdateRepo);
+            cfg.CloudRepo = Str(json, "cloudRepo", cfg.CloudRepo);
+            cfg.CloudBranch = Str(json, "cloudBranch", cfg.CloudBranch);
+            cfg.CloudFolder = Str(json, "cloudFolder", cfg.CloudFolder);
 
 
 
@@ -152,7 +158,10 @@ namespace WuwaChest
             sb.AppendLine("  \"cdpAutoRestartPet\": " + (CdpAutoRestartPet ? "true" : "false") + ",");
             sb.AppendLine("  \"cdpDisableOnExit\": " + (CdpDisableOnExit ? "true" : "false") + ",");
             sb.AppendLine("  \"updateEnabled\": " + (UpdateEnabled ? "true" : "false") + ",");
-            sb.AppendLine("  \"updateRepo\": \"" + UpdateRepo + "\"");
+            sb.AppendLine("  \"updateRepo\": \"" + UpdateRepo + "\",");
+            sb.AppendLine("  \"cloudRepo\": \"" + Esc(CloudRepo) + "\",");
+            sb.AppendLine("  \"cloudBranch\": \"" + Esc(CloudBranch) + "\",");
+            sb.AppendLine("  \"cloudFolder\": \"" + Esc(CloudFolder) + "\"");
 
 
 

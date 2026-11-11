@@ -475,15 +475,21 @@ namespace WuwaChest
             loginButton.Margin = new Padding(0, 1, 6, 1);
             tokenLoginPanel.Controls.Add(loginButton);
             settingsFlow.Controls.Add(MakeSettingRow("Token 登录", tokenLoginPanel));
-              var updateButtons = new FlowLayoutPanel
-              {
-                  Width = 204, Height = 28,
-                  FlowDirection = FlowDirection.LeftToRight,
-                  WrapContents = false
-              };
-              var updateButton = MakeButton("检查更新", delegate { CheckUpdates(); });
-              updateButtons.Controls.Add(updateButton);
-              settingsFlow.Controls.Add(MakeSettingRow("版本更新", updateButtons));
+            var utilButtons = new FlowLayoutPanel
+            {
+                Width = 204, Height = 28,
+                FlowDirection = FlowDirection.LeftToRight,
+                WrapContents = false
+            };
+            var updateButton = MakeButton("检查更新", delegate { CheckUpdates(); });
+            updateButton.Width = 90;
+            updateButton.Margin = new Padding(0, 1, 6, 1);
+            var cloudButton = MakeButton("云同步…", delegate { OpenCloudSync(); });
+            cloudButton.Width = 90;
+            cloudButton.Margin = new Padding(0, 1, 6, 1);
+            utilButtons.Controls.Add(updateButton);
+            utilButtons.Controls.Add(cloudButton);
+            settingsFlow.Controls.Add(MakeSettingRow("更新 / 云同步", utilButtons));
 
             var settingsButtons = new FlowLayoutPanel
             {
@@ -497,15 +503,6 @@ namespace WuwaChest
             settingsButtons.Controls.Add(MakeButton("恢复默认", ResetSettings));
             settingsFlow.Controls.Add(settingsButtons);
 
-            settingsFlow.Controls.Add(new Label
-            {
-                Text = "以上设置会写入 config.json，下次启动继续生效。\r\n高级参数（窗口标题/类名、点击后等待、日志保留天数等）可直接编辑该文件。",
-                ForeColor = Muted,
-                AutoSize = false,
-                Width = 360,
-                Height = 56,
-                BackColor = Color.Transparent
-            });
             var settingsCard = new GlassPanel
             {
                 Dock = DockStyle.Fill,
@@ -1695,6 +1692,11 @@ namespace WuwaChest
 
             Log.Info("检查更新：" + message);
             MessageBox.Show(this, message, "版本更新", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+        private void OpenCloudSync()
+        {
+            using (var form = new CloudSyncForm(_cfg, _dir, _configPath))
+                form.ShowDialog(this);
         }
         private void ExportSync()
         {

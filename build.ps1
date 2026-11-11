@@ -133,7 +133,7 @@ $arguments = @(
     ('/resource:' + (Join-Path $root 'default-background.jpg') + ',DefaultBackground.jpg'),
     ('/out:' + $out),
     '/r:System.dll', '/r:System.Core.dll', '/r:System.Drawing.dll',
-    '/r:System.Windows.Forms.dll', '/r:Microsoft.CSharp.dll', '/r:System.IO.Compression.dll', '/r:System.IO.Compression.FileSystem.dll'
+    '/r:System.Security.dll', '/r:System.Windows.Forms.dll', '/r:Microsoft.CSharp.dll', '/r:System.IO.Compression.dll', '/r:System.IO.Compression.FileSystem.dll'
 )
 foreach ($r in $refs) { $arguments += ('/r:' + $r) }
 $arguments += $sources
